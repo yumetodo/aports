@@ -1,6 +1,7 @@
 # Maintainer: Natanael Copa <ncopa@alpinelinux.org>
-pkgname=gcc
+pkgname=gcc-6
 pkgver=6.4.0
+_ver=6
 [ "$BOOTSTRAP" = "nolibc" ] && pkgname="gcc-pass2"
 [ "$CBUILD" != "$CHOST" ] && _cross="-$CARCH" || _cross=""
 [ "$CHOST" != "$CTARGET" ] && _target="-$CTARGET_ARCH" || _target=""
@@ -16,7 +17,7 @@ depends="binutils$_target isl"
 makedepends_build="gcc$_cross g++$_cross paxmark bison flex texinfo gawk zip gmp-dev mpfr-dev mpc1-dev zlib-dev"
 makedepends_host="linux-headers gmp-dev mpfr-dev mpc1-dev isl-dev zlib-dev !gettext-dev"
 subpackages=" "
-[ "$CHOST" = "$CTARGET" ] && subpackages="gcc-doc$_target"
+[ "$CHOST" = "$CTARGET" ] && subpackages="gcc-${_ver}-doc$_target"
 replaces="libstdc++ binutils"
 
 : ${LANG_CXX:=true}
@@ -117,7 +118,7 @@ fi
 
 _languages=c
 if $LANG_CXX; then
-	subpackages="$subpackages libstdc++:libcxx:$CTARGET_ARCH g++$_target:gpp"
+	subpackages="$subpackages libstdc++:libcxx:$CTARGET_ARCH g++-${_ver}$_target:gpp"
 	_languages="$_languages,c++"
 fi
 if $LANG_OBJC; then
@@ -333,7 +334,8 @@ build() {
 		$_cross_configure \
 		$_bootstrap_configure \
 		--with-system-zlib \
-		$_hash_style_configure
+		$_hash_style_configure \
+		--program-suffix=-${_ver}
 	make
 }
 
@@ -341,7 +343,8 @@ package() {
 	cd "$_builddir"
 	make -j1 DESTDIR="${pkgdir}" install
 
-	ln -s gcc "$pkgdir"/usr/bin/cc
+	# many packages expect this symlink
+	ln -s gcc-${_ver} "$pkgdir"/usr/bin/cc-${_ver}
 
 	# we dont support gcj -static
 	# and saving 35MB is not bad.
@@ -409,7 +412,7 @@ package() {
 		done
 	else
 		# add c89/c99 wrapper scripts
-		cat >"$pkgdir"/usr/bin/c89 <<'EOF'
+		cat >"$pkgdir"/usr/bin/c89-${_ver} <<'EOF'
 #!/bin/sh
 fl="-std=c89"
 for opt; do
@@ -419,9 +422,9 @@ for opt; do
 		exit 1;;
 	esac
 done
-exec gcc $fl ${1+"$@"}
+exec gcc-${_ver} $fl ${1+"$@"}
 EOF
-		cat >"$pkgdir"/usr/bin/c99 <<'EOF'
+		cat >"$pkgdir"/usr/bin/c99-${_ver} <<'EOF'
 #!/bin/sh
 fl="-std=c99"
 for opt; do
@@ -431,9 +434,10 @@ for opt; do
 		exit 1;;
 	esac
 done
-exec gcc $fl ${1+"$@"}
+exec gcc-${_ver} $fl ${1+"$@"}
 EOF
-		chmod 755 "$pkgdir"/usr/bin/c?9
+		chmod 755 "$pkgdir"/usr/bin/c89-${_ver}
+		chmod 755 "$pkgdir"/usr/bin/c99-${_ver}
 	fi
 }
 
@@ -467,7 +471,7 @@ gpp() {
 
 	mv "$pkgdir"/usr/${_target:+$CTARGET/}lib/*++* "$subpkgdir"/usr/${_target:+$CTARGET/}lib/
 	mv "$pkgdir"/usr/${_target:+$CTARGET/}include/c++ "$subpkgdir"/usr/${_target:+$CTARGET/}include/
-	mv "$pkgdir"/usr/bin/*++ "$subpkgdir"/usr/bin/
+	mv "$pkgdir"/usr/bin/*++-${_ver} "$subpkgdir"/usr/bin/
 }
 
 libobjc() {
