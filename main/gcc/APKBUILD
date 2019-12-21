@@ -336,7 +336,7 @@ build() {
 		--with-system-zlib \
 		$_hash_style_configure \
 		--program-suffix=-${_ver}
-	make
+	make -j4
 }
 
 package() {
